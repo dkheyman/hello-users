@@ -1,0 +1,64 @@
+service: hello-world
+
+plugins:
+  - serverless-dynamodb-local
+  - serverless-offline
+  - serverless-python-requirements
+  - serverless-wsgi
+
+custom:
+  wsgi:
+    app: app.app
+    packRequirements: false
+  pythonRequirements:
+    dockerizePip: non-linux
+  dynamodb:
+    stages:
+      - dev
+    start:
+      inMemory: true
+      port: 8000
+      migrate: true
+      convertEmptyValues: true
+  serverless-offline:
+    port: 5000
+
+provider:
+  name: aws
+  runtime: python3.7
+  region: us-east-1
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource:
+        - { "Fn::GetAtt": ["usersTable", "Arn"] }
+  stackTags:
+    Project: hello-world
+    Owner: "d.kheyman@gmail.com"
+
+functions:
+  app:
+    handler: wsgi_handler.handler
+    events:
+      - http: ANY /
+  putUser:
+    handler: wsgi_handler.handler
+    events:
+      - http:
+          path: hello/{username}
+          method: put
+  getUser:
+    handler: wsgi_handler.handler
+    events:
+      - http: 
+          path: hello/{username} 
+          method: get
+
+resources:
+  - ${file(resources/dynamodb-table.yml)}
